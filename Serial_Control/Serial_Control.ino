@@ -7,6 +7,10 @@
 HIRO hiro; // Declare an intance of HIRO.
 int status = 0;
 int priorStatus = 0;
+int LfrontLegAngle = 0;
+int changeLfrontLegAngle = 0;
+int previousLfrontLegAngle = 0;
+
 void setup() {
   hiro.begin();
   //hiro.genZeroBegin(); Uncomment this line and comment the line above if you are using H.I.R.O. Gen Zero Edition.
@@ -28,37 +32,52 @@ void loop() {
     status = int(Serial.parseInt());
     //Serial.println(status);
     //Serial.println("Hello! My name is H.I.R.O!");
-    // Serial.println("priorStatus: " + String(priorStatus));
-    // Serial.println("status: " + String(status));
+    //Serial.println("priorStatus: " + String(priorStatus));
+    //Serial.println("status: " + String(status));
+    
     if(priorStatus != status){
       Serial.println("Something changed" + String(status));
-      switch (status) {
-        case 1:
-        // rgbRandom();
-          wave(hiro);
-          Serial.println("case1");
-          break;
-        case 10:
-          rgbRandom();
-          swayLeft(hiro, 2);
-          Serial.println("case10");          
-          break;
-        case 00:
-          rgbRandom();
-          neutralStance(hiro);
-          Serial.println("case0");
-          break;
-        case 11:
-          rgbRandom();
-          sideToSideWorm(hiro, 2);
-          Serial.println("both hands");
-          break;
-        default:
-          neutralStance(hiro);
-          Serial.println("default");
-          break;
+      LfrontLegAngle = 18*status;
+      Serial.println(String(LfrontLegAngle));
+      if(LfrontLegAngle>180){
+        LfrontLegAngle = 180;
       }
+      //going to use the change to move the bobot
+      changeLfrontLegAngle = LfrontLegAngle - previousLfrontLegAngle;
+      //need to check to make sure the change doesn't make the robot less than 0
+      if(LfrontLegAngle <0){
+        changeLfrontLegAngle = -previousLfrontLegAngle;
+        LfrontLegAngle = 0;
+      }
+      move(hiro.lfl, -LfrontLegAngle, changeLfrontLegAngle);
+      // switch (status) {
+      //   case 1:
+      //   // rgbRandom();
+      //     wave(hiro);
+      //     Serial.println("case1");
+      //     break;
+      //   case 10:
+      //     rgbRandom();
+      //     swayLeft(hiro, 2);
+      //     Serial.println("case10");          
+      //     break;
+      //   case 00:
+      //     rgbRandom();
+      //     neutralStance(hiro);
+      //     Serial.println("case0");
+      //     break;
+      //   case 11:
+      //     rgbRandom();
+      //     sideToSideWorm(hiro, 2);
+      //     Serial.println("both hands");
+      //     break;
+      //   default:
+      //     neutralStance(hiro);
+      //     Serial.println("default");
+      //     break;
+      // }
     }
+    previousLfrontLegAngle = LfrontLegAngle;
   }else{
     neutralStance(hiro);
   }

@@ -56,6 +56,8 @@ def main():
     # and serial port sending
     last_send, last_ts = 0.0, -1
 
+    #measuring if hand is at top 
+    atTop = False
     # This is the video capture loop. Most of this is standard
     # boilerplate that we will use as is
     with vision.GestureRecognizer.create_from_options(options) as recognizer:
@@ -81,9 +83,17 @@ def main():
 
             # This executes if the recognizer has identified hands
             # in the frame
-            msg = "00\n"
+            if(not atTop):
+                msg = "0\n"
+
             if result.hand_landmarks:
-                print(result.hand_landmarks)
+                #print(result.hand_landmarks)
+
+                # Just some starter to get into mirroring, will add 2 hands next
+                # 1 - the hand_landmarks makes it so as your hand goes up, your percent of coverage on the screen does too
+                y_coordinate = 1 - result.hand_landmarks[0][9].y
+                #print("y coord ", y_coordinate)
+
                 # result.gestures includes all identified gestures
                 # gestures:[[Category(index=-1, score=0.5465779900550842, display_name=None, category_name='Thumb_Up')]],  
                 # Note this is a list of lists. To get "Thumb_Up" from above, for example, you'd do
@@ -98,17 +108,18 @@ def main():
                 # In both of the cases above, the outside list has one element if there is one hand and
                 # two elements if there are two hands. 
 
-                gestures = result.gestures
-                handedness = result.handedness
-                #print(len(gestures))
-                if(len(gestures)==1):
-                    if(handedness[0][0].category_name == "Left"):
-                        msg = '01\n'
-                        #print(msg)
-                    else:
-                        msg = '10\n'
-                elif(len(gestures)==2):
-                    msg = '11\n'
+                # This is for gestures, sending messages based on which hand is up
+                # gestures = result.gestures
+                # handedness = result.handedness
+                # #print(len(gestures))
+                # if(len(gestures)==1):
+                #     if(handedness[0][0].category_name == "Left"):
+                #         msg = '01\n'
+                #         #print(msg)
+                #     else:
+                #         msg = '10\n'
+                # elif(len(gestures)==2):
+                #     msg = '11\n'
                 
                 # TODO: The msg is the main thing we need to modify in this script
                 # This message is what will be sent to the robot's serial port
@@ -122,13 +133,23 @@ def main():
                 #msg = f"'gestures':'{gestures}', 'handedness':'{handedness}'\n"
                 # The rest of the work is done on the robot side, getting the input
                 # from its serial port and making it respond to the message stream
-
+                # Sends y_coordinate to serial port 
+                height = int(y_coordinate*10)
+                msg = str(height)+'\n' 
+                if height == 9 or msg == '10'+'\n':
+                    atTop = True
+                else:
+                    atTop = False
+            if (atTop and msg == '0'+'\n') or (msg == '10'+'\n'):
+                msg = '10'+'\n'
+            
             # Grabs current timestamp
             now = time.monotonic()
             # Makes sure time has passed before sending serial port message
             if now - last_send >= 1.0 / SEND_HZ:
                 # Sends the msg we defined previously though 
                 # the serial port in text form
+                print(msg)
                 ser.write(msg.encode("ascii"))
                 
                 # This prints out the serial port data received
