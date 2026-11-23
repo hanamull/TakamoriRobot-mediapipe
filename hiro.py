@@ -6,6 +6,8 @@ Setup:
   Download the model here and save it next to this script:
   https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task
 """
+
+# Imports
 import time
 import math
 import cv2
@@ -14,11 +16,9 @@ import mediapipe as mp
 from mediapipe.tasks import python as mp_python
 from mediapipe.tasks.python import vision
 
-# Below is the serial port associated with our own computer
-# (called 'loop' or 'loopback' because it's just sending data to itself) 
+# Below is the serial port associated with this computer, but we aren't using it right now. (Updated)
 #PORT = "loop://"  
 
-# TODO:
 # We want to send this data somewhere else (to the robot) instead of loop. 
 # We need to find out what the PORT should be to do this
 # Probably should be something like:
@@ -56,18 +56,21 @@ def main():
     # and serial port sending
     last_send, last_ts = 0.0, -1
 
-    #measuring if hand is at top 
+    # Measuring if hand is at top (Trying to debug the arm being stuck at the top)
     atTop = False
+
     # This is the video capture loop. Most of this is standard
-    # boilerplate that we will use as is
+    # stuff that we will use as is
     with vision.GestureRecognizer.create_from_options(options) as recognizer:
         while cap.isOpened():
             # ok is a boolean saying whether the next video frame was 
             # successfully captured. frame is the frame itself.
             ok, frame = cap.read()
+            # Below might be best implemented later, but we want to know the errors we get for now.
             # if not ok:
             #     break
-            frame = cv2.flip(frame, 1)  # mirroring the frame view feels more natural
+            frame = cv2.flip(frame, 1)  # mirroring the frame view for 'selfie' view
+
             # Convert cv2 capture frame to mediapipe image format
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
@@ -81,18 +84,22 @@ def main():
             # arguments
             result = recognizer.recognize_for_video(image, ts)
 
-            # This executes if the recognizer has identified hands
-            # in the frame
+            # Another little bit trying to debug the hand at top issue. Just sets default msg to 0 if it's not 10
             if(not atTop):
                 msg = "0\n"
 
+            # This executes if the recognizer has identified hands
+            # in the frame
             if result.hand_landmarks:
                 #print(result.hand_landmarks)
 
-                # Just some starter to get into mirroring, will add 2 hands next
+                # Just some starter to get into mirroring, we will add 2 hands next
                 # 1 - the hand_landmarks makes it so as your hand goes up, your percent of coverage on the screen does too
                 y_coordinate = 1 - result.hand_landmarks[0][9].y
                 #print("y coord ", y_coordinate)
+
+                # Below we don't need right now. We want to use hand landmarker 
+                # now that we've got everything set up, not gesture.
 
                 # result.gestures includes all identified gestures
                 # gestures:[[Category(index=-1, score=0.5465779900550842, display_name=None, category_name='Thumb_Up')]],  
@@ -121,23 +128,21 @@ def main():
                 # elif(len(gestures)==2):
                 #     msg = '11\n'
                 
-                # TODO: The msg is the main thing we need to modify in this script
+                # The msg is the main thing we need to modify in this script
                 # This message is what will be sent to the robot's serial port
-                # Temporarily we're sending the whole objects, but probably we want to send
-                # something like (with "Up" and "Down" as appropriate)
-                # "Left, Up, Right, Down"
-                # Or maybe even simpler (to interpret on the other side) just encode 
-                # left and right and up and down as 1s and 0s we could get away with sending
-                # two bits, the first being the state of the left hand and the second 
-                # being the state of the right hand
+                # Right now 11/21 - message is a whole number between 1 and 10, 180
+                # is divided by 10. We want seamless transitions between numbers so we will have to
+                # send more decimals to Hiro.
                 #msg = f"'gestures':'{gestures}', 'handedness':'{handedness}'\n"
                 # The rest of the work is done on the robot side, getting the input
                 # from its serial port and making it respond to the message stream
+                # For now Hiro is not doing the rounding, but that may change.
+
                 # Sends y_coordinate to serial port 
-                height = int(y_coordinate*10)
+                height = int(y_coordinate*10) # rounding
                 msg = str(height)+'\n' 
                 if height == 9 or msg == '10'+'\n':
-                    atTop = True
+                    atTop = True # Trying to debug the hand at top thing
                 else:
                     atTop = False
             if (atTop and msg == '0'+'\n') or (msg == '10'+'\n'):
@@ -157,7 +162,7 @@ def main():
                 # to our command line. When we are sending the data to 
                 # the robot, we can comment out this line, since our 
                 # computer won't be receiving anything. 
-                print(ser.read(ser.in_waiting or 1).decode(errors="ignore"), end="")
+                # print(ser.read(ser.in_waiting or 1).decode(errors="ignore"), end="")
 
                 # Update the last_send timestamp to the current time
                 last_send = now
@@ -175,7 +180,6 @@ def main():
     cv2.destroyAllWindows()
 
 
-# This is where the main function (defined above) actually gets called.
-# The __name__ stuff is Python stuff. 
+# Calling the main function
 if __name__ == "__main__":
     main()

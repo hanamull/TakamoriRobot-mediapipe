@@ -35,20 +35,24 @@ void loop() {
     //Serial.println("priorStatus: " + String(priorStatus));
     //Serial.println("status: " + String(status));
     
+    // Tracks whether status is different from last status
     if(priorStatus != status){
       Serial.println("Something changed" + String(status));
       LfrontLegAngle = 18*status;
       Serial.println(String(LfrontLegAngle));
       if(LfrontLegAngle>180){
         LfrontLegAngle = 180;
+        Serial.println(String(LfrontLegAngle) + "in the if statement");
       }
-      //going to use the change to move the bobot
+      Serial.println(String(LfrontLegAngle) + "notIn");
+      // Going to use the change to move the bobot
       changeLfrontLegAngle = LfrontLegAngle - previousLfrontLegAngle;
-      //need to check to make sure the change doesn't make the robot less than 0
+      // Need to check to make sure the change doesn't make the robot less than 0
       if(LfrontLegAngle <0){
         changeLfrontLegAngle = -previousLfrontLegAngle;
         LfrontLegAngle = 0;
       }
+      // There is a bug we must fix where HIRO's arm stays at the very top.
       move(hiro.lfl, -LfrontLegAngle, changeLfrontLegAngle);
       // switch (status) {
       //   case 1:
